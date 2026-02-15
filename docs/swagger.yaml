@@ -1,0 +1,49 @@
+basePath: /
+definitions:
+  handlers.HealthResponse:
+    properties:
+      database:
+        type: string
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Backend API for Zabaan mobile app
+  title: Zabaan API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: Returns API name and key endpoints
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: API info
+      tags:
+      - general
+  /health:
+    get:
+      description: Returns whether the server is running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.HealthResponse'
+      summary: Health check
+      tags:
+      - general
+schemes:
+- http
+swagger: "2.0"
