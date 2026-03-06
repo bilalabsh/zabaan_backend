@@ -40,7 +40,7 @@ The app uses a **layered style**: HTTP → handler → service → repository.
 | user     | ✅      | ✅      | ✅         | User CRUD, used by auth          |
 | health   | ✅      | —       | —          | /health, /                       |
 | config   | —       | —       | —          | Load env (PORT, JWT_SECRET, …)  |
-| database | —       | —       | —          | MySQL connection, table setup    |
+| database | —       | —       | —          | MySQL connection, entity-wise table setup |
 | middleware | —     | —       | —          | RequireAuth, rate limit          |
 
 ---
@@ -56,7 +56,7 @@ zabaan_backend/
 │
 ├── internal/
 │   ├── config/             # config.Load(), config.Validate(), env parsing
-│   ├── database/           # DB connection, createUsersTable, ensureAuthColumns
+│   ├── database/           # DB connection (database.go); per-entity migrations (e.g. users.go)
 │   ├── models/             # Shared structs (e.g. User)
 │   │
 │   ├── auth/               # Authentication
@@ -76,11 +76,17 @@ zabaan_backend/
 │       ├── auth.go         # RequireAuth (JWT required), GetClaimsFromRequest
 │       └── ratelimit.go    # AuthRateLimiter (per-IP limit on signup/login/getToken)
 │
-└── docs/                   # Swagger (swag-generated)
+    └── docs/                   # Swagger (swag-generated)
     ├── docs.go
     ├── swagger.json
     └── swagger.yaml
 ```
+
+---
+
+## Practices
+
+- **Database: entity-wise modularization** — We keep schema setup modular by entity. `internal/database/database.go` holds only the connection (DB, Init, Close). Each entity has its own file (e.g. `users.go`) with a `migrateX()` function that creates/updates that entity’s tables and columns; Init calls these migrators (e.g. `migrateUsers()`). When adding a new entity, add a new file (e.g. `posts.go`) with `migratePosts()` and call it from Init.
 
 ---
 
@@ -140,7 +146,8 @@ Same as login (email/password), but then:
 
 ### Database
 
-- **database.Init(cfg)** opens MySQL if DATABASE_URL is set, creates `users` table if needed, adds auth columns (first_name, last_name, password_hash, token_valid_after).
+- **database.Init(cfg)** opens MySQL if DATABASE_URL is set, then runs entity migrations (e.g. `migrateUsers()` in `users.go`: creates `users` table, adds auth columns).
+- Schema is modular by entity: one file per entity (e.g. `internal/database/users.go`) with its own migrator; see [Practices](#practices).
 - **database.DB** is used by **user.NewRepository(database.DB)**; auth uses the same repo for user + token_valid_after.
 
 ### Logging
